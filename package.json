@@ -1,0 +1,14 @@
+{
+  "name": "navcook",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun server.js",
+    "dev": "bun --watch server.js",
+    "tunnel": "PORT=3002 bun --watch server.js & cloudflared tunnel --url http://localhost:3002"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "express": "^4.19.0"
+  }
+}

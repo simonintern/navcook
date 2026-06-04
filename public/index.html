@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NavCook — Import Recipe</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="url"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="url"]:focus {
+      border-color: #f97316;
+    }
+
+    button {
+      margin-top: 1rem;
+      width: 100%;
+      padding: 0.75rem;
+      background: #f97316;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover:not(:disabled) { background: #ea6c0a; }
+    button:disabled { background: #6b3010; cursor: not-allowed; }
+
+    .status {
+      margin-top: 1.25rem;
+      font-size: 0.9rem;
+      min-height: 1.2em;
+    }
+
+    .status.error { color: #f87171; }
+    .status.success { color: #4ade80; }
+
+    .result-link {
+      display: block;
+      margin-top: 0.5rem;
+      color: #f97316;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>NavCook</h1>
+    <p class="subtitle">Paste a recipe URL to import it</p>
+
+    <form id="importForm">
+      <label for="urlInput">Recipe URL</label>
+      <input
+        type="url"
+        id="urlInput"
+        placeholder="https://www.seriouseats.com/..."
+        required
+        autocomplete="off"
+      >
+      <button type="submit" id="submitBtn">Import Recipe</button>
+    </form>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('importForm');
+    const urlInput = document.getElementById('urlInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const statusEl = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = urlInput.value.trim();
+      if (!url) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Importing…';
+      statusEl.className = 'status';
+      statusEl.innerHTML = '';
+
+      try {
+        const res = await fetch('/api/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          statusEl.className = 'status error';
+          statusEl.textContent = data.error || 'Something went wrong.';
+          return;
+        }
+
+        statusEl.className = 'status success';
+        statusEl.innerHTML = `Saved as <strong>${data.filename}</strong>`;
+
+        const link = document.createElement('a');
+        link.href = data.recipeUrl;
+        link.target = '_blank';
+        link.className = 'result-link';
+        link.textContent = `View JSON → ${data.recipeUrl}`;
+        statusEl.appendChild(link);
+
+        setTimeout(() => {
+          window.location.href = data.recipeUrl;
+        }, 1200);
+
+      } catch {
+        statusEl.className = 'status error';
+        statusEl.textContent = 'Network error — is the server running?';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Import Recipe';
+      }
+    });
+  </script>
+</body>
+</html>
