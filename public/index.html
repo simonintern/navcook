@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NavCook — Import Recipe</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -59,14 +60,14 @@
     }
 
     input[type="url"]:focus {
-      border-color: #f97316;
+      border-color: #e03131;
     }
 
     button {
       margin-top: 1rem;
       width: 100%;
       padding: 0.75rem;
-      background: #f97316;
+      background: #e03131;
       color: #fff;
       border: none;
       border-radius: 8px;
@@ -76,8 +77,8 @@
       transition: background 0.15s;
     }
 
-    button:hover:not(:disabled) { background: #ea6c0a; }
-    button:disabled { background: #6b3010; cursor: not-allowed; }
+    button:hover:not(:disabled) { background: #c92a2a; }
+    button:disabled { background: #6b1010; cursor: not-allowed; }
 
     .status {
       margin-top: 1.25rem;
@@ -91,7 +92,7 @@
     .result-link {
       display: block;
       margin-top: 0.5rem;
-      color: #f97316;
+      color: #e03131;
       word-break: break-all;
     }
   </style>
@@ -147,19 +148,7 @@
           return;
         }
 
-        statusEl.className = 'status success';
-        statusEl.innerHTML = `Saved as <strong>${data.filename}</strong>`;
-
-        const link = document.createElement('a');
-        link.href = data.recipeUrl;
-        link.target = '_blank';
-        link.className = 'result-link';
-        link.textContent = `View JSON → ${data.recipeUrl}`;
-        statusEl.appendChild(link);
-
-        setTimeout(() => {
-          window.location.href = data.recipeUrl;
-        }, 1200);
+        window.location.href = `/recipe.html?file=${encodeURIComponent(data.filename)}`;
 
       } catch {
         statusEl.className = 'status error';
