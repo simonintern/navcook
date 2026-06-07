@@ -504,14 +504,7 @@
       const timerEl = document.getElementById('recipeTimer');
       timerEl.classList.add('done');
 
-      const navH = document.getElementById('tabBar').offsetHeight;
-      const originY = (window.innerHeight - navH) / window.innerHeight;
-      confetti({ particleCount: 100, spread: 70, angle: 60, origin: { x: 0, y: originY } });
-      confetti({ particleCount: 100, spread: 70, angle: 120, origin: { x: 1, y: originY } });
-      setTimeout(() => {
-        confetti({ particleCount: 60, spread: 80, angle: 60, origin: { x: 0, y: originY } });
-        confetti({ particleCount: 60, spread: 80, angle: 120, origin: { x: 1, y: originY } });
-      }, 400);
+      confetti({ particleCount: 120, spread: 70, origin: { x: 0.5, y: 0.6 } });
 
       cookActive = false;
       currentStep = 0;
