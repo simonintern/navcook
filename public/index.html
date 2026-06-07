@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>NavCook</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#e03131">
@@ -31,6 +31,7 @@
       background: #141414;
       border-top: 1px solid #2a2a2a;
       z-index: 20;
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     .nav-tab {
@@ -529,7 +530,14 @@
   </script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        // Reload when a new SW takes control
+        navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+        // Re-check for updates every time the app is foregrounded
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update();
+        });
+      });
     }
   </script>
 </body>

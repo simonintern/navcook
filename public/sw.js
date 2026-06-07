@@ -1,4 +1,4 @@
-const CACHE = 'navcook-v1';
+const CACHE = 'navcook-v__BUILD__';
 const SHELL = ['/', '/index.html', '/recipe.html'];
 
 self.addEventListener('install', e => {

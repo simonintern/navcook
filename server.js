@@ -43,8 +43,18 @@ async function migrate() {
 
 await migrate();
 
+const BUILD = Date.now().toString(36);
+
 const app = express();
 app.use(express.json());
+
+app.get('/sw.js', async (req, res) => {
+  const raw = await readFile(path.join(__dirname, 'public', 'sw.js'), 'utf8');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(raw.replace('__BUILD__', BUILD));
+});
+
 app.use(express.static('public'));
 
 function slugify(text) {

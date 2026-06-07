@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>NavCook — Recipe</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#e03131">
@@ -122,6 +122,7 @@
       background: #141414;
       border-top: 1px solid #2a2a2a;
       z-index: 20;
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     .tab {
@@ -651,6 +652,14 @@
       }
 
       const piPanel = document.getElementById('panelIngredients');
+
+      function reorderIngredients() {
+        const cards = [...piPanel.querySelectorAll('.ingredient-card')];
+        const unchecked = cards.filter(c => !c.classList.contains('checked'));
+        const checkedCards = cards.filter(c => c.classList.contains('checked'));
+        [...unchecked, ...checkedCards].forEach(c => piPanel.appendChild(c));
+      }
+
       ingredients.forEach((ing, i) => {
         const card = document.createElement('label');
         card.className = 'card ingredient-card' + (checked.has(i) ? ' checked' : '');
@@ -661,6 +670,7 @@
           if (cb.checked) checked.add(i); else checked.delete(i);
           card.classList.toggle('checked', cb.checked);
           saveChecked();
+          reorderIngredients();
         });
         const span = document.createElement('span');
         span.className = 'ingredient-text';
@@ -669,6 +679,8 @@
         card.appendChild(span);
         piPanel.appendChild(card);
       });
+
+      reorderIngredients();
 
       // Steps
       stepElapsed = steps.map(() => 0);
@@ -736,7 +748,12 @@
   </script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js');
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update();
+        });
+      });
     }
   </script>
 </body>
