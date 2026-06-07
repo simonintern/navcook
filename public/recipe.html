@@ -533,20 +533,19 @@
     // ── Load recipe ───────────────────────────────────────────────────────────
     async function loadRecipe() {
       const params = new URLSearchParams(location.search);
-      const file = params.get('file');
-      if (!file) {
+      const id = params.get('id');
+      if (!id) {
         document.getElementById('loadingMsg').className = 'message error';
-        document.getElementById('loadingMsg').textContent = 'No recipe file specified.';
+        document.getElementById('loadingMsg').textContent = 'No recipe specified.';
         return;
       }
 
-      const rawUrl = `/recipes/${file}`;
-
       let recipe;
       try {
-        const res = await fetch(rawUrl);
+        const res = await fetch(`/api/recipe/${encodeURIComponent(id)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        recipe = await res.json();
+        const doc = await res.json();
+        recipe = doc.recipe;
       } catch (err) {
         document.getElementById('loadingMsg').className = 'message error';
         document.getElementById('loadingMsg').textContent = `Failed to load recipe: ${err.message}`;
@@ -555,7 +554,7 @@
 
       document.getElementById('loadingMsg').style.display = 'none';
 
-      const title = recipe.name || file;
+      const title = recipe.name || 'Recipe';
       document.title = `${title} — NavCook`;
 
       const ingredients = recipe.recipeIngredient || [];
@@ -588,11 +587,12 @@
       const countPart = `${ingredients.length} ingredient${ingredients.length !== 1 ? 's' : ''} · ${steps.length} step${steps.length !== 1 ? 's' : ''}`;
       document.getElementById('recipeSubtitle').textContent = timePart ? `${timePart} · ${countPart}` : countPart;
 
-      document.getElementById('rawLink').href = rawUrl;
-      document.getElementById('rawLink').textContent = rawUrl;
+      const apiUrl = `/api/recipe/${encodeURIComponent(id)}`;
+      document.getElementById('rawLink').href = apiUrl;
+      document.getElementById('rawLink').textContent = apiUrl;
 
       // Ingredients
-      const storageKey = `navcook-checked-${file}`;
+      const storageKey = `navcook-checked-${id}`;
       const checked = new Set(JSON.parse(sessionStorage.getItem(storageKey) || '[]'));
 
       function saveChecked() {

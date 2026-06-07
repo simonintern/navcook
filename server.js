@@ -1,18 +1,51 @@
 import express from 'express';
 import * as cheerio from 'cheerio';
-import { writeFile, mkdir } from 'fs/promises';
+import { readdir, readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { createHash } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import Datastore from '@seald-io/nedb';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RECIPES_DIR = path.join(__dirname, 'recipes');
-const app = express();
+const DB_PATH = path.join(__dirname, 'data', 'recipes.db');
 
+await mkdir(path.join(__dirname, 'data'), { recursive: true });
+
+const db = new Datastore({ filename: DB_PATH, autoload: true });
+db.ensureIndex({ fieldName: 'metadata.dateAdded' });
+
+// Migrate existing flat JSON files into the DB on first run
+async function migrate() {
+  if (!existsSync(RECIPES_DIR)) return;
+  const files = (await readdir(RECIPES_DIR)).filter(f => f.endsWith('.json'));
+  for (const file of files) {
+    const alreadyImported = await db.findOneAsync({ 'metadata.migratedFrom': file });
+    if (alreadyImported) continue;
+    try {
+      const raw = await readFile(path.join(RECIPES_DIR, file), 'utf8');
+      const recipe = JSON.parse(raw);
+      await db.insertAsync({
+        recipe,
+        metadata: {
+          dateAdded: new Date(0).toISOString(), // epoch so they sort to the bottom
+          sourceUrl: recipe.sourceUrl || null,
+          migratedFrom: file,
+        },
+      });
+      console.log(`Migrated ${file}`);
+    } catch (err) {
+      console.warn(`Failed to migrate ${file}: ${err.message}`);
+    }
+  }
+}
+
+await migrate();
+
+const app = express();
 app.use(express.json());
 app.use(express.static('public'));
-app.use('/recipes', express.static(RECIPES_DIR));
 
 function slugify(text) {
   return text
@@ -74,13 +107,30 @@ app.post('/api/import', async (req, res) => {
     return res.status(422).json({ error: err.message });
   }
 
-  const title = typeof recipe.name === 'string' ? recipe.name : 'recipe';
-  const filename = `${slugify(title)}-${urlHash(url)}.json`;
+  const doc = await db.insertAsync({
+    recipe,
+    metadata: {
+      dateAdded: new Date().toISOString(),
+      sourceUrl: url,
+    },
+  });
 
-  if (!existsSync(RECIPES_DIR)) await mkdir(RECIPES_DIR, { recursive: true });
-  await writeFile(path.join(RECIPES_DIR, filename), JSON.stringify(recipe, null, 2));
+  res.json({ id: doc._id });
+});
 
-  res.json({ filename, recipeUrl: `/recipes/${filename}` });
+app.get('/api/recipes', async (req, res) => {
+  const docs = await db.findAsync({}).sort({ 'metadata.dateAdded': -1 });
+  res.json(docs.map(d => ({
+    id: d._id,
+    name: d.recipe?.name || 'Untitled',
+    dateAdded: d.metadata.dateAdded,
+  })));
+});
+
+app.get('/api/recipe/:id', async (req, res) => {
+  const doc = await db.findOneAsync({ _id: req.params.id });
+  if (!doc) return res.status(404).json({ error: 'Recipe not found' });
+  res.json(doc);
 });
 
 const PORT = process.env.PORT || 3000;

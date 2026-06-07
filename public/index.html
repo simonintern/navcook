@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NavCook — Import Recipe</title>
+  <title>NavCook</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,44 +13,30 @@
       background: #0f0f0f;
       color: #f0f0f0;
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-    }
-
-    .card {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 12px;
-      padding: 2.5rem;
-      width: 100%;
-      max-width: 520px;
+      padding: 2rem 1.25rem;
+      max-width: 640px;
+      margin: 0 auto;
     }
 
     h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 0.4rem;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
     }
 
-    .subtitle {
-      color: #888;
-      font-size: 0.9rem;
-      margin-bottom: 2rem;
+    /* Import form */
+    .import-row {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 2.5rem;
     }
 
-    label {
-      display: block;
-      font-size: 0.85rem;
-      color: #aaa;
-      margin-bottom: 0.5rem;
-    }
-
-    input[type="url"] {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      background: #111;
+    .import-row input[type="url"] {
+      flex: 1;
+      min-width: 0;
+      padding: 0.7rem 1rem;
+      background: #1a1a1a;
       border: 1px solid #333;
       border-radius: 8px;
       color: #f0f0f0;
@@ -59,69 +45,155 @@
       transition: border-color 0.15s;
     }
 
-    input[type="url"]:focus {
-      border-color: #e03131;
-    }
+    .import-row input[type="url"]::placeholder { color: #555; }
+    .import-row input[type="url"]:focus { border-color: #e03131; }
 
-    button {
-      margin-top: 1rem;
-      width: 100%;
-      padding: 0.75rem;
+    .import-row button {
+      flex-shrink: 0;
+      padding: 0.7rem 1.2rem;
       background: #e03131;
       color: #fff;
       border: none;
       border-radius: 8px;
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
+      white-space: nowrap;
       transition: background 0.15s;
     }
 
-    button:hover:not(:disabled) { background: #c92a2a; }
-    button:disabled { background: #6b1010; cursor: not-allowed; }
+    .import-row button:hover:not(:disabled) { background: #c92a2a; }
+    .import-row button:disabled { background: #6b1010; cursor: not-allowed; }
 
-    .status {
-      margin-top: 1.25rem;
+    .import-status {
+      margin-top: -1.75rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.88rem;
+      min-height: 1.1em;
+    }
+
+    .import-status.error { color: #f87171; }
+    .import-status.success { color: #4ade80; }
+
+    /* Recipe list */
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #555;
+      margin-bottom: 0.75rem;
+    }
+
+    .recipe-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .recipe-item {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1rem;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .recipe-item:hover {
+      border-color: #e03131;
+      background: #1f1414;
+    }
+
+    .recipe-name {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #f0f0f0;
+    }
+
+    .recipe-date {
+      font-size: 0.78rem;
+      color: #555;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .empty {
+      color: #444;
       font-size: 0.9rem;
-      min-height: 1.2em;
+      padding: 0.5rem 0;
     }
 
-    .status.error { color: #f87171; }
-    .status.success { color: #4ade80; }
-
-    .result-link {
-      display: block;
-      margin-top: 0.5rem;
-      color: #e03131;
-      word-break: break-all;
-    }
+    .loading { color: #555; font-size: 0.9rem; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>NavCook</h1>
-    <p class="subtitle">Paste a recipe URL to import it</p>
+  <h1>NavCook</h1>
 
-    <form id="importForm">
-      <label for="urlInput">Recipe URL</label>
-      <input
-        type="url"
-        id="urlInput"
-        placeholder="https://www.seriouseats.com/..."
-        required
-        autocomplete="off"
-      >
-      <button type="submit" id="submitBtn">Import Recipe</button>
-    </form>
+  <form id="importForm" class="import-row">
+    <input
+      type="url"
+      id="urlInput"
+      placeholder="Paste a recipe URL…"
+      required
+      autocomplete="off"
+    >
+    <button type="submit" id="submitBtn">Import</button>
+  </form>
 
-    <div class="status" id="status"></div>
+  <div class="import-status" id="importStatus"></div>
+
+  <div class="section-label">Recipes</div>
+  <div class="recipe-list" id="recipeList">
+    <span class="loading">Loading…</span>
   </div>
 
   <script>
+    // ── Recipe list ───────────────────────────────────────────────────────────
+    function formatDate(iso) {
+      const d = new Date(iso);
+      if (d.getFullYear() === 1970) return '';
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    async function loadRecipes() {
+      const list = document.getElementById('recipeList');
+      try {
+        const res = await fetch('/api/recipes');
+        const recipes = await res.json();
+        list.innerHTML = '';
+        if (!recipes.length) {
+          list.innerHTML = '<span class="empty">No recipes yet — import one above.</span>';
+          return;
+        }
+        for (const r of recipes) {
+          const a = document.createElement('a');
+          a.className = 'recipe-item';
+          a.href = `/recipe.html?id=${encodeURIComponent(r.id)}`;
+          const date = formatDate(r.dateAdded);
+          a.innerHTML = `
+            <span class="recipe-name">${r.name}</span>
+            ${date ? `<span class="recipe-date">${date}</span>` : ''}
+          `;
+          list.appendChild(a);
+        }
+      } catch {
+        list.innerHTML = '<span class="empty">Failed to load recipes.</span>';
+      }
+    }
+
+    loadRecipes();
+
+    // ── Import form ───────────────────────────────────────────────────────────
     const form = document.getElementById('importForm');
     const urlInput = document.getElementById('urlInput');
     const submitBtn = document.getElementById('submitBtn');
-    const statusEl = document.getElementById('status');
+    const statusEl = document.getElementById('importStatus');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -130,8 +202,8 @@
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Importing…';
-      statusEl.className = 'status';
-      statusEl.innerHTML = '';
+      statusEl.className = 'import-status';
+      statusEl.textContent = '';
 
       try {
         const res = await fetch('/api/import', {
@@ -143,19 +215,19 @@
         const data = await res.json();
 
         if (!res.ok) {
-          statusEl.className = 'status error';
+          statusEl.className = 'import-status error';
           statusEl.textContent = data.error || 'Something went wrong.';
           return;
         }
 
-        window.location.href = `/recipe.html?file=${encodeURIComponent(data.filename)}`;
+        window.location.href = `/recipe.html?id=${encodeURIComponent(data.id)}`;
 
       } catch {
-        statusEl.className = 'status error';
+        statusEl.className = 'import-status error';
         statusEl.textContent = 'Network error — is the server running?';
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Import Recipe';
+        submitBtn.textContent = 'Import';
       }
     });
   </script>
