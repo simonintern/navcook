@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "bun server.js",
-    "dev": "bun --watch server.js",
+    "dev": "PORT=3002 bun --watch server.js",
     "tunnel": "PORT=3002 bun --watch server.js & cloudflared tunnel --url http://localhost:3002"
   },
   "dependencies": {
