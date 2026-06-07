@@ -477,6 +477,25 @@
       return `${m}:${String(sec).padStart(2,'0')}`;
     }
 
+    // ── Wake Lock ─────────────────────────────────────────────────────────────
+    let wakeLock = null;
+
+    async function acquireWakeLock() {
+      if (!('wakeLock' in navigator)) return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+      } catch {}
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    }
+
+    // Re-acquire after tab becomes visible again (browser releases it on hide)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && cookActive) acquireWakeLock();
+    });
+
     // ── Cook mode state ───────────────────────────────────────────────────────
     let cookActive = false;
     let currentStep = 0;
@@ -556,6 +575,7 @@
       startRecipeTimer();
 
       activateStep(0);
+      acquireWakeLock();
     }
 
     function nextStep(stepCount) {
@@ -588,6 +608,7 @@
       addToHistory(recipeId, recipeName);
 
       cookActive = false;
+      releaseWakeLock();
       currentStep = 0;
       stepElapsed = stepElapsed.map(() => 0);
       recipeElapsed = 0;
