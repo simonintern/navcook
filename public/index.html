@@ -54,6 +54,9 @@
     .nav-tab.active { color: #e03131; }
     .nav-tab:hover:not(.active) { color: #ccc; }
 
+    #nav-cart { white-space: nowrap; }
+    #navCartBadge { font-size: 0.75rem; font-weight: 600; }
+
     /* ── Panels ─────────────────────────────────────────────────────────────── */
     .panel {
       display: none;
@@ -73,7 +76,7 @@
       display: flex;
       gap: 0.6rem;
       align-items: center;
-      margin-bottom: 2.5rem;
+      margin-bottom: 0.75rem;
     }
 
     .import-row input[type="url"] {
@@ -110,8 +113,8 @@
     .import-row button:disabled { background: #6b1010; cursor: not-allowed; }
 
     .import-status {
-      margin-top: -1.75rem;
-      margin-bottom: 1.5rem;
+      margin-top: 0;
+      margin-bottom: 0.75rem;
       font-size: 0.88rem;
       min-height: 1.1em;
     }
@@ -282,6 +285,119 @@
     }
 
     .loading { color: #555; font-size: 0.9rem; }
+
+    /* ── Cart panel ─────────────────────────────────────────────────────────── */
+    .cart-add-row {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    .cart-add-row input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      padding: 0.7rem 1rem;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .cart-add-row input[type="text"]::placeholder { color: #555; }
+    .cart-add-row input[type="text"]:focus { border-color: #e03131; }
+
+    .cart-add-row button {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      background: #e03131;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .cart-add-row button:hover { background: #c92a2a; }
+
+
+    .cart-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .cart-back {
+      background: none;
+      border: none;
+      color: #e03131;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0;
+    }
+
+    .cart-back:hover { color: #c92a2a; }
+
+    .cart-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .cart-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1rem;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+    }
+
+    .cart-item-text {
+      font-size: 0.95rem;
+      color: #f0f0f0;
+      flex: 1;
+    }
+
+    .cart-item-remove {
+      background: none;
+      border: none;
+      color: #444;
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.2rem 0.3rem;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+
+    .cart-item-remove:hover { color: #f87171; }
+
+    .cart-clear-btn {
+      margin-top: 1rem;
+      padding: 0.65rem 1.2rem;
+      background: none;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #888;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .cart-clear-btn:hover { border-color: #f87171; color: #f87171; }
   </style>
 </head>
 <body>
@@ -323,6 +439,20 @@
     <div class="history-list" id="historyList"></div>
   </div>
 
+  <!-- ── Cart ────────────────────────────────────────────────────────────── -->
+  <div class="panel" id="panel-cart">
+    <h1>Shopping Cart</h1>
+    <form id="cartAddForm" class="cart-add-row">
+      <input type="text" id="cartAddInput" placeholder="Add an item…" autocomplete="off">
+      <button type="submit"><i class="fa-solid fa-plus"></i></button>
+    </form>
+    <div class="section-label" style="margin-top:1.25rem">Items to buy</div>
+    <div class="cart-list" id="cartList"></div>
+    <button class="cart-clear-btn" id="cartClearBtn" style="display:none" onclick="clearCart()">
+      Clear all
+    </button>
+  </div>
+
   <!-- ── Bottom nav ───────────────────────────────────────────────────────── -->
   <nav class="bottom-nav">
     <button class="nav-tab active" id="nav-explore" onclick="showTab('explore')">
@@ -337,13 +467,77 @@
       <i class="fa-solid fa-clock-rotate-left"></i>
       History
     </button>
+    <button class="nav-tab" id="nav-cart" onclick="showCart()">
+      <i class="fa-solid fa-cart-shopping"></i>
+      Cart<span id="navCartBadge"></span>
+    </button>
   </nav>
 
   <script>
+    // ── Cart helpers ──────────────────────────────────────────────────────────
+    function getCart() {
+      try { return JSON.parse(localStorage.getItem('navcook-cart') || '[]'); } catch { return []; }
+    }
+    function saveCart(c) { localStorage.setItem('navcook-cart', JSON.stringify(c)); }
+
+    function updateCartBadge() {
+      const count = getCart().length;
+      const navBadge = document.getElementById('navCartBadge');
+      navBadge.textContent = count > 0 ? ` (${count})` : '';
+    }
+
+    function renderCart() {
+      const list = document.getElementById('cartList');
+      const clearBtn = document.getElementById('cartClearBtn');
+      const cart = getCart();
+      list.innerHTML = '';
+      clearBtn.style.display = cart.length ? '' : 'none';
+
+      if (!cart.length) {
+        list.innerHTML = '<span class="empty">Cart is empty — add ingredients from a recipe.</span>';
+        return;
+      }
+
+      cart.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+          <span class="cart-item-text">${item.text}</span>
+          <button class="cart-item-remove" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        row.querySelector('.cart-item-remove').addEventListener('click', () => {
+          const c = getCart();
+          c.splice(idx, 1);
+          saveCart(c);
+          updateCartBadge();
+          renderCart();
+        });
+        list.appendChild(row);
+      });
+    }
+
+    function clearCart() {
+      saveCart([]);
+      updateCartBadge();
+      renderCart();
+    }
+
+    function showCart() {
+      renderCart();
+      ['explore', 'queue', 'history'].forEach(t => {
+        document.getElementById(`panel-${t}`).classList.remove('active');
+        document.getElementById(`nav-${t}`).classList.remove('active');
+      });
+      document.getElementById('panel-cart').classList.add('active');
+      document.getElementById('nav-cart').classList.add('active');
+    }
+
     // ── Tab switching ─────────────────────────────────────────────────────────
     const TABS = ['explore', 'queue', 'history'];
 
     function showTab(name) {
+      document.getElementById('panel-cart').classList.remove('active');
+      document.getElementById('nav-cart').classList.remove('active');
       TABS.forEach(t => {
         document.getElementById(`panel-${t}`).classList.toggle('active', t === name);
         document.getElementById(`nav-${t}`).classList.toggle('active', t === name);
@@ -485,6 +679,23 @@
     }
 
     loadRecipes();
+    updateCartBadge();
+
+    document.getElementById('cartAddForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const input = document.getElementById('cartAddInput');
+      const text = input.value.trim();
+      if (!text) return;
+      const c = getCart();
+      if (!c.some(item => item.text === text)) {
+        c.push({ text, addedAt: new Date().toISOString() });
+        saveCart(c);
+        updateCartBadge();
+        renderCart();
+      }
+      input.value = '';
+      input.focus();
+    });
 
     // ── Import form ───────────────────────────────────────────────────────────
     const form = document.getElementById('importForm');

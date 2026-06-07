@@ -1,4 +1,4 @@
-const CACHE = 'navcook-v__BUILD__';
+const CACHE = 'navcook-nf-__BUILD__';
 const SHELL = ['/', '/index.html', '/recipe.html'];
 
 self.addEventListener('install', e => {
@@ -18,10 +18,17 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Always go network-first for API calls
+  // API calls: bypass SW entirely
   if (url.pathname.startsWith('/api/')) return;
 
+  // Shell assets: network-first so updates land immediately; fall back to cache offline
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });

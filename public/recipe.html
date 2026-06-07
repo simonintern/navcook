@@ -214,11 +214,27 @@
       line-height: 1.45;
       color: #e8e8e8;
       transition: color 0.15s;
+      flex: 1;
     }
 
     .ingredient-card.checked .ingredient-text {
       color: #555;
     }
+
+    .cart-add-btn {
+      background: none;
+      border: none;
+      color: #444;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 0.15rem 0.25rem;
+      flex-shrink: 0;
+      transition: color 0.15s;
+      align-self: center;
+    }
+
+    .cart-add-btn:hover { color: #e03131; }
+    .cart-add-btn.in-cart { color: #e03131; }
 
     /* Step card */
     .step-meta {
@@ -401,6 +417,12 @@
   </div>
 
   <script>
+    // ── Cart localStorage helpers ─────────────────────────────────────────────
+    function getCart() {
+      try { return JSON.parse(localStorage.getItem('navcook-cart') || '[]'); } catch { return []; }
+    }
+    function saveCart(c) { localStorage.setItem('navcook-cart', JSON.stringify(c)); }
+
     // ── Queue / History localStorage helpers ──────────────────────────────────
     function getQueue() {
       try { return JSON.parse(localStorage.getItem('navcook-queue') || '[]'); } catch { return []; }
@@ -661,6 +683,7 @@
       }
 
       ingredients.forEach((ing, i) => {
+        const ingText = decodeHtml(ing);
         const card = document.createElement('label');
         card.className = 'card ingredient-card' + (checked.has(i) ? ' checked' : '');
         const cb = document.createElement('input');
@@ -674,9 +697,28 @@
         });
         const span = document.createElement('span');
         span.className = 'ingredient-text';
-        span.textContent = decodeHtml(ing);
+        span.textContent = ingText;
+
+        const cartBtn = document.createElement('button');
+        cartBtn.className = 'cart-add-btn';
+        cartBtn.type = 'button';
+        cartBtn.title = 'Add to shopping cart';
+        const cart = getCart();
+        if (cart.some(c => c.text === ingText)) cartBtn.classList.add('in-cart');
+        cartBtn.innerHTML = '<i class="fa-solid fa-cart-plus"></i>';
+        cartBtn.addEventListener('click', e => {
+          e.preventDefault();
+          const c = getCart();
+          if (!c.some(item => item.text === ingText)) {
+            c.push({ text: ingText, addedAt: new Date().toISOString() });
+            saveCart(c);
+          }
+          cartBtn.classList.add('in-cart');
+        });
+
         card.appendChild(cb);
         card.appendChild(span);
+        card.appendChild(cartBtn);
         piPanel.appendChild(card);
       });
 
