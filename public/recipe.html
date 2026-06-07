@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NavCook — Recipe</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#e03131">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
   <style>
@@ -241,6 +243,7 @@
       font-size: 0.9rem;
       line-height: 1.6;
       color: #bbb;
+      overflow-wrap: break-word;
     }
 
     /* Raw link */
@@ -658,6 +661,11 @@
     }
 
     loadRecipe();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
   </script>
 </body>
 </html>
