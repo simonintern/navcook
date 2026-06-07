@@ -38,6 +38,13 @@
       gap: 1rem;
     }
 
+    .header-back-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
     .header-back {
       display: inline-flex;
       align-items: center;
@@ -45,10 +52,27 @@
       font-size: 0.8rem;
       color: #e03131;
       text-decoration: none;
-      margin-bottom: 0.75rem;
     }
 
     .header-back:hover { color: #c92a2a; }
+
+    .queue-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: none;
+      border: 1px solid #333;
+      border-radius: 20px;
+      color: #888;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.3rem 0.75rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .queue-btn:hover { border-color: #e03131; color: #e03131; }
+    .queue-btn.added { border-color: #4ade80; color: #4ade80; }
 
     .header h1 {
       font-size: 1.35rem;
@@ -328,7 +352,12 @@
 <body>
 
   <div class="header" id="header" style="display:none">
-    <a href="/" class="header-back"><i class="fa-solid fa-arrow-left"></i> Import another</a>
+    <div class="header-back-row">
+      <a href="/" class="header-back"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      <button class="queue-btn" id="queueBtn" title="Add to queue">
+        <i class="fa-solid fa-circle-plus"></i> Add to queue
+      </button>
+    </div>
     <div class="header-top-row">
       <h1 id="recipeTitle"></h1>
       <div class="recipe-timer" id="recipeTimer">
@@ -371,6 +400,25 @@
   </div>
 
   <script>
+    // ── Queue / History localStorage helpers ──────────────────────────────────
+    function getQueue() {
+      try { return JSON.parse(localStorage.getItem('navcook-queue') || '[]'); } catch { return []; }
+    }
+    function saveQueue(q) { localStorage.setItem('navcook-queue', JSON.stringify(q)); }
+
+    function addToHistory(id, name) {
+      const history = (() => { try { return JSON.parse(localStorage.getItem('navcook-history') || '[]'); } catch { return []; } })();
+      history.unshift({ id, name, completedAt: new Date().toISOString() });
+      localStorage.setItem('navcook-history', JSON.stringify(history));
+    }
+
+    function removeFirstFromQueue(id) {
+      const q = getQueue();
+      const idx = q.findIndex(item => item.id === id);
+      if (idx !== -1) q.splice(idx, 1);
+      saveQueue(q);
+    }
+
     // ── Tab switching ─────────────────────────────────────────────────────────
     function switchTab(tab) {
       document.getElementById('panelIngredients').classList.toggle('active', tab === 'ingredients');
@@ -508,6 +556,13 @@
       timerEl.classList.add('done');
 
       confetti({ particleCount: 120, spread: 70, origin: { x: 0.5, y: 0.6 } });
+
+      // Record completion
+      const params = new URLSearchParams(location.search);
+      const recipeId = params.get('id');
+      const recipeName = document.getElementById('recipeTitle').textContent;
+      removeFirstFromQueue(recipeId);
+      addToHistory(recipeId, recipeName);
 
       cookActive = false;
       currentStep = 0;
@@ -653,6 +708,23 @@
       });
 
       document.getElementById('fabBack').addEventListener('click', prevStep);
+
+      // Queue button
+      const queueBtn = document.getElementById('queueBtn');
+      const recipeId = params.get('id');
+      const recipeName = title;
+
+      queueBtn.addEventListener('click', () => {
+        const q = getQueue();
+        q.push({ id: recipeId, name: recipeName, addedAt: new Date().toISOString() });
+        saveQueue(q);
+        queueBtn.classList.add('added');
+        queueBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Added';
+        setTimeout(() => {
+          queueBtn.classList.remove('added');
+          queueBtn.innerHTML = '<i class="fa-solid fa-circle-plus"></i> Add to queue';
+        }, 1500);
+      });
 
       document.getElementById('header').style.display = '';
       document.getElementById('rawLinkBar').style.display = '';
