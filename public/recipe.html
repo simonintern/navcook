@@ -572,7 +572,14 @@
       const fabBack = document.getElementById('fabBack');
       const isLast = currentStep === stepCards.length - 1;
 
-      fabBack.classList.toggle('visible', currentStep > 0);
+      fabBack.classList.add('visible');
+      if (currentStep === 0) {
+        fabBack.innerHTML = '<i class="fa-solid fa-rotate-left"></i>';
+        fabBack.title = 'Reset';
+      } else {
+        fabBack.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+        fabBack.title = 'Previous step';
+      }
 
       fabMain.innerHTML = isLast
         ? '<i class="fa-solid fa-flag-checkered"></i>'
@@ -603,6 +610,31 @@
 
     function prevStep() {
       if (currentStep > 0) activateStep(currentStep - 1);
+    }
+
+    function resetCooking() {
+      pauseStepTimer(currentStep);
+      stopRecipeTimer();
+
+      cookActive = false;
+      releaseWakeLock();
+      clearCookState();
+      currentStep = 0;
+      stepElapsed = stepElapsed.map(() => 0);
+      recipeElapsed = 0;
+
+      stepCards.forEach(c => c.classList.remove('active'));
+      document.getElementById('panelSteps').classList.remove('cooking');
+      stepTimerEls.forEach((el, i) => { if (el) el.textContent = '0:00'; });
+
+      const timerEl = document.getElementById('recipeTimer');
+      timerEl.classList.remove('visible', 'done');
+      document.getElementById('recipeTimerDisplay').textContent = '0:00';
+
+      const fabMain = document.getElementById('fabMain');
+      fabMain.innerHTML = '<i class="fa-solid fa-play"></i>';
+      fabMain.title = 'Start cooking';
+      document.getElementById('fabBack').classList.remove('visible');
     }
 
     function finishCooking() {
@@ -797,7 +829,9 @@
         }
       });
 
-      document.getElementById('fabBack').addEventListener('click', prevStep);
+      document.getElementById('fabBack').addEventListener('click', () => {
+        if (currentStep === 0) resetCooking(); else prevStep();
+      });
 
       // Queue button
       const queueBtn = document.getElementById('queueBtn');
