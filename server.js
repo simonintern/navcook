@@ -128,6 +128,25 @@ app.post('/api/import', async (req, res) => {
   res.json({ id: doc._id });
 });
 
+app.post('/api/recipes', async (req, res) => {
+  const { name, recipeIngredient, recipeInstructions } = req.body;
+  if (!name) return res.status(400).json({ error: 'name is required' });
+
+  const recipe = {
+    '@type': 'Recipe',
+    name,
+    recipeIngredient: Array.isArray(recipeIngredient) ? recipeIngredient : [],
+    recipeInstructions: Array.isArray(recipeInstructions) ? recipeInstructions : [],
+  };
+
+  const doc = await db.insertAsync({
+    recipe,
+    metadata: { dateAdded: new Date().toISOString(), sourceUrl: null },
+  });
+
+  res.json({ id: doc._id });
+});
+
 app.get('/api/recipes', async (req, res) => {
   const docs = await db.findAsync({}).sort({ 'metadata.dateAdded': -1 });
   res.json(docs.map(d => ({
@@ -141,6 +160,24 @@ app.get('/api/recipe/:id', async (req, res) => {
   const doc = await db.findOneAsync({ _id: req.params.id });
   if (!doc) return res.status(404).json({ error: 'Recipe not found' });
   res.json(doc);
+});
+
+app.put('/api/recipe/:id', async (req, res) => {
+  const { name, recipeIngredient, recipeInstructions } = req.body;
+  if (!name) return res.status(400).json({ error: 'name is required' });
+
+  const doc = await db.findOneAsync({ _id: req.params.id });
+  if (!doc) return res.status(404).json({ error: 'Recipe not found' });
+
+  const updatedRecipe = {
+    ...doc.recipe,
+    name,
+    recipeIngredient: Array.isArray(recipeIngredient) ? recipeIngredient : [],
+    recipeInstructions: Array.isArray(recipeInstructions) ? recipeInstructions : [],
+  };
+
+  await db.updateAsync({ _id: req.params.id }, { $set: { recipe: updatedRecipe } });
+  res.json({ id: req.params.id });
 });
 
 const PORT = process.env.PORT || 3000;

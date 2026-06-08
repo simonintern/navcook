@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NavCook — New Recipe</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#e03131">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      padding: 1.5rem 1.25rem 1rem;
+      border-bottom: 1px solid #1e1e1e;
+      background: #0f0f0f;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-back-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .header-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: #e03131;
+      text-decoration: none;
+    }
+
+    .header-back:hover { color: #c92a2a; }
+
+    .save-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: #e03131;
+      border: none;
+      border-radius: 20px;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.4rem 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .save-btn:hover:not(:disabled) { background: #c92a2a; }
+    .save-btn:disabled { background: #6b1010; cursor: not-allowed; }
+
+    /* Title input */
+    .title-input {
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.3;
+      background: none;
+      border: none;
+      color: #f0f0f0;
+      outline: none;
+      width: 100%;
+      padding: 0;
+    }
+
+    .title-input::placeholder { color: #444; }
+
+    /* Tab bar */
+    .tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      background: #141414;
+      border-top: 1px solid #2a2a2a;
+      z-index: 20;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 0.85rem 0.5rem 0.6rem;
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      transition: color 0.15s;
+    }
+
+    .tab i { font-size: 1.1rem; }
+    .tab.active { color: #e03131; }
+    .tab:hover:not(.active) { color: #ccc; }
+
+    /* Content */
+    .content {
+      flex: 1;
+      padding: 1rem 1rem 5rem;
+    }
+
+    .panel { display: none; }
+    .panel.active { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    /* Cards */
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+    }
+
+    /* Ingredient row */
+    .ingredient-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .ingredient-input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #e8e8e8;
+      font-size: 0.95rem;
+      line-height: 1.45;
+      outline: none;
+      width: 100%;
+      padding: 0;
+      font-family: inherit;
+    }
+
+    .ingredient-input::placeholder { color: #444; }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #444;
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.2rem 0.3rem;
+      flex-shrink: 0;
+      transition: color 0.15s;
+      align-self: flex-start;
+    }
+
+    .delete-btn:hover { color: #f87171; }
+
+    /* Step card */
+    .step-card-edit {
+      position: relative;
+    }
+
+    .step-number-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .step-textarea {
+      width: 100%;
+      background: none;
+      border: none;
+      color: #bbb;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      outline: none;
+      resize: none;
+      min-height: 4rem;
+      font-family: inherit;
+      padding: 0;
+      overflow-wrap: break-word;
+    }
+
+    .step-textarea::placeholder { color: #444; }
+
+    /* Add button */
+    .add-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: #1a1a1a;
+      border: 1px dashed #333;
+      border-radius: 10px;
+      color: #555;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      width: 100%;
+    }
+
+    .add-btn:hover { border-color: #e03131; color: #e03131; }
+
+    /* Save status */
+    .save-status {
+      font-size: 0.82rem;
+      min-height: 1em;
+      margin-top: 0.2rem;
+    }
+
+    .save-status.error { color: #f87171; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-back-row">
+      <a href="/" class="header-back"><i class="fa-solid fa-arrow-left"></i> Back</a>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem">
+        <button class="save-btn" id="saveBtn"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+        <span class="save-status" id="saveStatus"></span>
+      </div>
+    </div>
+    <input class="title-input" id="titleInput" type="text" placeholder="Recipe name…" autocomplete="off">
+  </div>
+
+  <div class="content">
+    <div class="panel active" id="panelIngredients">
+      <!-- ingredient cards inserted here -->
+    </div>
+    <div class="panel" id="panelSteps">
+      <!-- step cards inserted here -->
+    </div>
+  </div>
+
+  <nav class="tab-bar">
+    <button class="tab active" id="tabIngredients" onclick="switchTab('ingredients')">
+      <i class="fa-solid fa-list"></i>
+      Ingredients
+    </button>
+    <button class="tab" id="tabSteps" onclick="switchTab('steps')">
+      <i class="fa-solid fa-shoe-prints"></i>
+      Steps
+    </button>
+  </nav>
+
+  <script>
+    const editId = new URLSearchParams(location.search).get('id');
+
+    // Set page title and back link depending on mode
+    if (editId) {
+      document.title = 'NavCook — Edit Recipe';
+      document.querySelector('.header-back').href = `/recipe.html?id=${encodeURIComponent(editId)}`;
+    }
+
+    function switchTab(tab) {
+      document.getElementById('panelIngredients').classList.toggle('active', tab === 'ingredients');
+      document.getElementById('panelSteps').classList.toggle('active', tab === 'steps');
+      document.getElementById('tabIngredients').classList.toggle('active', tab === 'ingredients');
+      document.getElementById('tabSteps').classList.toggle('active', tab === 'steps');
+    }
+
+    // ── Ingredients ───────────────────────────────────────────────────────────
+    const ingPanel = document.getElementById('panelIngredients');
+    let ingAddBtn;
+
+    function makeIngredientCard(value = '') {
+      const card = document.createElement('div');
+      card.className = 'card ingredient-row';
+      const input = document.createElement('input');
+      input.className = 'ingredient-input';
+      input.type = 'text';
+      input.placeholder = 'e.g. 2 cups flour';
+      input.value = value;
+      const del = document.createElement('button');
+      del.className = 'delete-btn';
+      del.title = 'Remove';
+      del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      del.addEventListener('click', () => card.remove());
+      card.appendChild(input);
+      card.appendChild(del);
+      return card;
+    }
+
+    function buildIngredientPanel(values = ['']) {
+      ingPanel.innerHTML = '';
+      values.forEach(v => ingPanel.appendChild(makeIngredientCard(v)));
+      ingAddBtn = document.createElement('button');
+      ingAddBtn.className = 'add-btn';
+      ingAddBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add ingredient';
+      ingAddBtn.addEventListener('click', () => {
+        ingPanel.insertBefore(makeIngredientCard(), ingAddBtn);
+        ingPanel.lastElementChild.previousElementSibling.querySelector('input').focus();
+      });
+      ingPanel.appendChild(ingAddBtn);
+    }
+
+    // ── Steps ─────────────────────────────────────────────────────────────────
+    const stepsPanel = document.getElementById('panelSteps');
+    let stepAddBtn;
+
+    function autoGrow(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    function updateStepNumbers() {
+      const labels = stepsPanel.querySelectorAll('.step-number-label span');
+      const total = labels.length;
+      labels.forEach((el, i) => { el.textContent = `Step ${i + 1} of ${total}`; });
+    }
+
+    function makeStepCard(value = '') {
+      const card = document.createElement('div');
+      card.className = 'card step-card-edit';
+      const meta = document.createElement('div');
+      meta.className = 'step-number-label';
+      const numSpan = document.createElement('span');
+      meta.appendChild(numSpan);
+      const del = document.createElement('button');
+      del.className = 'delete-btn';
+      del.title = 'Remove';
+      del.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+      del.addEventListener('click', () => {
+        card.remove();
+        updateStepNumbers();
+      });
+      meta.appendChild(del);
+      const textarea = document.createElement('textarea');
+      textarea.className = 'step-textarea';
+      textarea.placeholder = 'Describe this step…';
+      textarea.value = value;
+      textarea.rows = 1;
+      textarea.addEventListener('input', () => autoGrow(textarea));
+      card.appendChild(meta);
+      card.appendChild(textarea);
+      return card;
+    }
+
+    function buildStepsPanel(values = ['']) {
+      stepsPanel.innerHTML = '';
+      values.forEach(v => stepsPanel.appendChild(makeStepCard(v)));
+      stepAddBtn = document.createElement('button');
+      stepAddBtn.className = 'add-btn';
+      stepAddBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add step';
+      stepAddBtn.addEventListener('click', () => {
+        stepsPanel.insertBefore(makeStepCard(), stepAddBtn);
+        updateStepNumbers();
+        const ta = stepsPanel.lastElementChild.previousElementSibling.querySelector('textarea');
+        ta.focus();
+        autoGrow(ta);
+      });
+      stepsPanel.appendChild(stepAddBtn);
+      updateStepNumbers();
+    }
+
+    // ── Load existing recipe for edit ─────────────────────────────────────────
+    async function init() {
+      if (!editId) {
+        buildIngredientPanel();
+        buildStepsPanel();
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/recipe/${encodeURIComponent(editId)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const doc = await res.json();
+        const recipe = doc.recipe;
+
+        document.getElementById('titleInput').value = recipe.name || '';
+
+        const ingredients = recipe.recipeIngredient || [];
+        buildIngredientPanel(ingredients.length ? ingredients : ['']);
+
+        const rawSteps = Array.isArray(recipe.recipeInstructions) ? recipe.recipeInstructions : [];
+        const stepTexts = rawSteps.flatMap(s => {
+          if (s['@type'] === 'HowToSection') return (s.itemListElement || []).map(getStepText);
+          return [getStepText(s)];
+        }).filter(Boolean);
+        buildStepsPanel(stepTexts.length ? stepTexts : ['']);
+
+        // Grow all textareas after paint
+        requestAnimationFrame(() => {
+          stepsPanel.querySelectorAll('.step-textarea').forEach(autoGrow);
+        });
+      } catch (err) {
+        setStatus(`Failed to load recipe: ${err.message}`, true);
+        buildIngredientPanel();
+        buildStepsPanel();
+      }
+    }
+
+    function getStepText(step) {
+      if (typeof step === 'string') return step;
+      if (step.text) return step.text;
+      if (step.itemListElement) return step.itemListElement.map(getStepText).join(' ');
+      return '';
+    }
+
+    init();
+
+    // ── Save ──────────────────────────────────────────────────────────────────
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      const name = document.getElementById('titleInput').value.trim();
+      if (!name) {
+        setStatus('Recipe name is required.', true);
+        document.getElementById('titleInput').focus();
+        return;
+      }
+
+      const ingredients = [...ingPanel.querySelectorAll('.ingredient-input')]
+        .map(i => i.value.trim()).filter(Boolean);
+
+      const steps = [...stepsPanel.querySelectorAll('.step-textarea')]
+        .map(t => t.value.trim()).filter(Boolean);
+
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+      setStatus('');
+
+      try {
+        const url = editId ? `/api/recipe/${encodeURIComponent(editId)}` : '/api/recipes';
+        const method = editId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, recipeIngredient: ingredients, recipeInstructions: steps }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setStatus(data.error || 'Save failed.', true);
+          return;
+        }
+        const targetId = editId || data.id;
+        window.location.href = `/recipe.html?id=${encodeURIComponent(targetId)}`;
+      } catch {
+        setStatus('Network error.', true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save';
+      }
+    });
+
+    function setStatus(msg, isError = false) {
+      const el = document.getElementById('saveStatus');
+      el.textContent = msg;
+      el.className = 'save-status' + (isError ? ' error' : '');
+    }
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update();
+        });
+      });
+    }
+  </script>
+</body>
+</html>

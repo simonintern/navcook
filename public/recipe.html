@@ -377,7 +377,7 @@
       </button>
     </div>
     <div class="header-top-row">
-      <h1 id="recipeTitle"></h1>
+      <h1 style="flex:1"><span id="recipeTitle"></span><a id="editBtn" href="#" title="Edit recipe" style="display:none;color:#555;font-size:0.75em;padding:0.1em 0.25em;margin-left:0.35em;text-decoration:none;transition:color 0.15s;vertical-align:middle" onmouseover="this.style.color='#e03131'" onmouseout="this.style.color='#555'"><i class="fa-solid fa-pen-to-square"></i></a></h1>
       <div class="recipe-timer" id="recipeTimer">
         <i class="fa-regular fa-clock"></i>
         <span id="recipeTimerDisplay">0:00</span>
@@ -672,7 +672,7 @@
         s['@type'] === 'HowToSection' ? (s.itemListElement || []) : [s]
       ).filter(s => getStepText(s).trim());
 
-      document.getElementById('recipeTitle').textContent = title;
+      document.getElementById('recipeTitle').textContent = title;  // targets the <span>
 
       function parseDuration(iso) {
         if (!iso) return null;
@@ -813,6 +813,10 @@
           queueBtn.innerHTML = '<i class="fa-solid fa-circle-plus"></i> Add to queue';
         }, 1500);
       });
+
+      const editBtn = document.getElementById('editBtn');
+      editBtn.href = `/create.html?id=${encodeURIComponent(id)}`;
+      editBtn.style.display = '';
 
       document.getElementById('header').style.display = '';
       document.getElementById('rawLinkBar').style.display = '';
