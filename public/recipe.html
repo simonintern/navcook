@@ -260,7 +260,8 @@
     }
 
     .step-card.active .step-number { color: #e03131; }
-    .step-card.active .step-timer { display: block; color: #e03131; }
+    .step-card.active .step-timer { color: #e03131; }
+    .panel.cooking .step-timer { display: block; }
 
     .step-card.active {
       border-color: #e03131;
@@ -448,6 +449,9 @@
       document.getElementById('panelSteps').classList.toggle('active', tab === 'steps');
       document.getElementById('tabIngredients').classList.toggle('active', tab === 'ingredients');
       document.getElementById('tabSteps').classList.toggle('active', tab === 'steps');
+      if (tab === 'steps' && cookActive && stepCards[currentStep]) {
+        requestAnimationFrame(() => stepCards[currentStep].scrollIntoView({ behavior: 'smooth', block: 'center' }));
+      }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -497,47 +501,54 @@
     });
 
     // ── Cook mode state ───────────────────────────────────────────────────────
+    let recipeId = null;  // set once recipe loads
     let cookActive = false;
     let currentStep = 0;
     let stepCards = [];
     let stepTimerEls = [];
     let stepElapsed = [];   // seconds accumulated per step
-    let stepStart = null;   // Date.now() when current step timer last started
-    let recipeStart = null;
     let recipeElapsed = 0;
     let recipeTimerInterval = null;
     let stepTimerInterval = null;
 
+    function saveCookState() {
+      if (!recipeId) return;
+      sessionStorage.setItem(`navcook-cookstate-${recipeId}`, JSON.stringify({
+        cookActive, currentStep, stepElapsed, recipeElapsed
+      }));
+    }
+
+    function clearCookState() {
+      if (recipeId) sessionStorage.removeItem(`navcook-cookstate-${recipeId}`);
+    }
+
     function startRecipeTimer() {
-      recipeStart = Date.now();
       recipeTimerInterval = setInterval(() => {
-        const total = recipeElapsed + Math.floor((Date.now() - recipeStart) / 1000);
-        document.getElementById('recipeTimerDisplay').textContent = formatSeconds(total);
-      }, 500);
+        recipeElapsed++;
+        document.getElementById('recipeTimerDisplay').textContent = formatSeconds(recipeElapsed);
+        saveCookState();
+      }, 1000);
     }
 
     function stopRecipeTimer() {
       if (recipeTimerInterval) {
         clearInterval(recipeTimerInterval);
         recipeTimerInterval = null;
-        recipeElapsed += Math.floor((Date.now() - recipeStart) / 1000);
       }
     }
 
     function startStepTimer(idx) {
-      stepStart = Date.now();
       stepTimerInterval = setInterval(() => {
-        const elapsed = stepElapsed[idx] + Math.floor((Date.now() - stepStart) / 1000);
-        if (stepTimerEls[idx]) stepTimerEls[idx].textContent = formatSeconds(elapsed);
-      }, 500);
+        stepElapsed[idx]++;
+        if (stepTimerEls[idx]) stepTimerEls[idx].textContent = formatSeconds(stepElapsed[idx]);
+        saveCookState();
+      }, 1000);
     }
 
     function pauseStepTimer(idx) {
       if (stepTimerInterval) {
         clearInterval(stepTimerInterval);
         stepTimerInterval = null;
-        stepElapsed[idx] += Math.floor((Date.now() - stepStart) / 1000);
-        stepStart = null;
       }
     }
 
@@ -551,6 +562,7 @@
       stepCards[idx].classList.add('active');
       stepCards[idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
       startStepTimer(idx);
+      saveCookState();
       updateFab();
     }
 
@@ -569,6 +581,7 @@
 
     function startCooking(stepCount) {
       cookActive = true;
+      document.getElementById('panelSteps').classList.add('cooking');
       switchTab('steps');
 
       document.getElementById('recipeTimer').classList.add('visible');
@@ -601,20 +614,20 @@
       confetti({ particleCount: 120, spread: 70, origin: { x: 0.5, y: 0.6 } });
 
       // Record completion
-      const params = new URLSearchParams(location.search);
-      const recipeId = params.get('id');
       const recipeName = document.getElementById('recipeTitle').textContent;
       removeFirstFromQueue(recipeId);
       addToHistory(recipeId, recipeName);
 
       cookActive = false;
       releaseWakeLock();
+      clearCookState();
       currentStep = 0;
       stepElapsed = stepElapsed.map(() => 0);
       recipeElapsed = 0;
-      recipeStart = null;
 
       stepCards.forEach(c => c.classList.remove('active'));
+      document.getElementById('panelSteps').classList.remove('cooking');
+      stepTimerEls.forEach((el, i) => { if (el) el.textContent = '0:00'; });
 
       timerEl.classList.remove('visible', 'done');
       document.getElementById('recipeTimerDisplay').textContent = '0:00';
@@ -629,6 +642,7 @@
     async function loadRecipe() {
       const params = new URLSearchParams(location.search);
       const id = params.get('id');
+      recipeId = id;
       if (!id) {
         document.getElementById('loadingMsg').className = 'message error';
         document.getElementById('loadingMsg').textContent = 'No recipe specified.';
@@ -786,7 +800,6 @@
 
       // Queue button
       const queueBtn = document.getElementById('queueBtn');
-      const recipeId = params.get('id');
       const recipeName = title;
 
       queueBtn.addEventListener('click', () => {
@@ -805,6 +818,27 @@
       document.getElementById('rawLinkBar').style.display = '';
       document.getElementById('tabBar').style.display = '';
       document.getElementById('fabGroup').style.display = 'flex';
+
+      // Restore in-progress cook session
+      const saved = (() => { try { return JSON.parse(sessionStorage.getItem(`navcook-cookstate-${id}`) || 'null'); } catch { return null; } })();
+      if (saved && saved.cookActive) {
+        cookActive = true;
+        document.getElementById('panelSteps').classList.add('cooking');
+        currentStep = saved.currentStep || 0;
+        stepElapsed = saved.stepElapsed && saved.stepElapsed.length === steps.length ? saved.stepElapsed : stepElapsed;
+        recipeElapsed = saved.recipeElapsed || 0;
+
+        document.getElementById('recipeTimer').classList.add('visible');
+        document.getElementById('recipeTimerDisplay').textContent = formatSeconds(recipeElapsed);
+        startRecipeTimer();
+
+        stepTimerEls.forEach((el, i) => { if (el) el.textContent = formatSeconds(stepElapsed[i]); });
+        stepCards[currentStep].classList.add('active');
+        startStepTimer(currentStep);
+        updateFab();
+        switchTab('steps');
+        acquireWakeLock();
+      }
     }
 
     loadRecipe();
