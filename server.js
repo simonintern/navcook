@@ -92,6 +92,21 @@ function extractRecipe(html, sourceUrl) {
   if (!recipe) throw new Error('No Schema.org Recipe found on this page');
 
   recipe.sourceUrl = sourceUrl;
+
+  delete recipe.aggregateRating;
+  delete recipe.review;
+  delete recipe.reviews;
+
+  if (Array.isArray(recipe.recipeInstructions)) {
+    recipe.recipeInstructions = recipe.recipeInstructions.map(step => {
+      if (step && typeof step === 'object' && step.name && step.text && step.name === step.text) {
+        const { name, ...rest } = step;
+        return rest;
+      }
+      return step;
+    });
+  }
+
   return recipe;
 }
 
