@@ -73,7 +73,7 @@
     }
 
     .queue-btn:hover { border-color: #e03131; color: #e03131; }
-    .queue-btn.added { border-color: #4ade80; color: #4ade80; }
+    .queue-btn.added { border-color: #4ade80; color: #4ade80; cursor: default; }
 
     .header h1 {
       font-size: 1.35rem;
@@ -809,10 +809,7 @@
         saveQueue(q);
         queueBtn.classList.add('added');
         queueBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Added';
-        setTimeout(() => {
-          queueBtn.classList.remove('added');
-          queueBtn.innerHTML = '<i class="fa-solid fa-circle-plus"></i> Add to queue';
-        }, 1500);
+        queueBtn.disabled = true;
       });
 
       const editBtn = document.getElementById('editBtn');
