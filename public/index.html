@@ -76,20 +76,36 @@
       display: flex;
       gap: 0.6rem;
       align-items: center;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0;
+    }
+
+    .import-input-wrap {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .import-link-icon {
+      position: absolute;
+      left: 0.85rem;
+      color: #666;
+      font-size: 0.9rem;
+      pointer-events: none;
     }
 
     .import-row input[type="url"] {
-      flex: 1;
-      min-width: 0;
-      padding: 0.7rem 1rem;
+      width: 100%;
+      padding: 0.6rem 1rem 0.6rem 2.4rem;
       background: #1a1a1a;
       border: 1px solid #333;
-      border-radius: 8px;
+      border-radius: 12px;
       color: #f0f0f0;
       font-size: 0.95rem;
       outline: none;
       transition: border-color 0.15s;
+      box-sizing: border-box;
     }
 
     .import-row input[type="url"]::placeholder { color: #555; }
@@ -97,26 +113,66 @@
 
     .import-row button {
       flex-shrink: 0;
-      padding: 0.7rem 1.2rem;
+      width: 40px;
+      height: 40px;
       background: #e03131;
       color: #fff;
       border: none;
-      border-radius: 8px;
-      font-size: 0.95rem;
+      border-radius: 12px;
+      font-size: 1.1rem;
       font-weight: 600;
       cursor: pointer;
-      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: background 0.15s;
     }
 
     .import-row button:hover:not(:disabled) { background: #c92a2a; }
     .import-row button:disabled { background: #6b1010; cursor: not-allowed; }
 
+    .import-or {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 0.75rem 0;
+      color: #555;
+      font-size: 0.85rem;
+    }
+    .import-or::before, .import-or::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #2a2a2a;
+    }
+
+    .create-recipe-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.6rem;
+      border: 1.5px solid #e03131;
+      border-radius: 12px;
+      color: #e03131;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      margin-bottom: 1.5rem;
+      transition: background 0.15s;
+      box-sizing: border-box;
+    }
+    .create-recipe-btn:hover { background: rgba(224,49,49,0.08); }
+
     .import-status {
       margin-top: 0;
-      margin-bottom: 0.75rem;
+      margin-bottom: 0;
       font-size: 0.88rem;
-      min-height: 1.1em;
+      min-height: 0;
+    }
+    .import-status:not(:empty) {
+      margin-bottom: 0.5rem;
     }
 
     .import-status.error { color: #f87171; }
@@ -404,23 +460,29 @@
 
   <!-- ── Explore ──────────────────────────────────────────────────────────── -->
   <div class="panel active" id="panel-explore">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+    <div style="margin-bottom:1.5rem">
       <h1 style="margin-bottom:0">NavCook</h1>
-      <a href="/create.html" style="width:36px;height:36px;border-radius:50%;background:#e03131;color:#fff;border:none;font-size:1.1rem;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0;box-shadow:0 2px 8px rgba(224,49,49,0.35);transition:background 0.15s" onmouseover="this.style.background='#c92a2a'" onmouseout="this.style.background='#e03131'" title="Create recipe"><i class="fa-solid fa-plus"></i></a>
     </div>
 
     <form id="importForm" class="import-row">
-      <input
-        type="url"
-        id="urlInput"
-        placeholder="Paste a recipe URL…"
-        required
-        autocomplete="off"
-      >
-      <button type="submit" id="submitBtn">Import</button>
+      <div class="import-input-wrap">
+        <i class="fa-solid fa-link import-link-icon"></i>
+        <input
+          type="url"
+          id="urlInput"
+          placeholder="Paste a recipe URL…"
+          required
+          autocomplete="off"
+        >
+      </div>
+      <button type="submit" id="submitBtn"><i class="fa-solid fa-arrow-right"></i></button>
     </form>
 
     <div class="import-status" id="importStatus"></div>
+
+    <div class="import-or"><span>or</span></div>
+
+    <a href="/create.html" class="create-recipe-btn"><i class="fa-solid fa-plus"></i> Create Recipe</a>
 
     <div class="section-label">Recipes</div>
     <div class="recipe-list" id="recipeList">
@@ -712,7 +774,7 @@
       if (!url) return;
 
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Importing…';
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
       statusEl.className = 'import-status';
       statusEl.textContent = '';
 
@@ -738,7 +800,7 @@
         statusEl.textContent = 'Network error — is the server running?';
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Import';
+        submitBtn.innerHTML = '<i class="fa-solid fa-arrow-right"></i>';
       }
     });
   </script>
