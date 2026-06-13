@@ -460,8 +460,9 @@
 
   <!-- ── Explore ──────────────────────────────────────────────────────────── -->
   <div class="panel active" id="panel-explore">
-    <div style="margin-bottom:1.5rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
       <h1 style="margin-bottom:0">NavCook</h1>
+      <button id="authBtn" style="background:none;border:1px solid #333;color:#aaa;font-size:0.85rem;font-weight:600;padding:0.4rem 0.9rem;border-radius:20px;cursor:pointer;transition:border-color 0.15s,color 0.15s;white-space:nowrap">Log in</button>
     </div>
 
     <form id="importForm" class="import-row">
@@ -787,6 +788,12 @@
 
         const data = await res.json();
 
+        if (res.status === 401) {
+          statusEl.className = 'import-status error';
+          statusEl.innerHTML = 'You must be logged in to import recipes. <a href="#" onclick="event.preventDefault();showAuthDialog(()=>location.reload())" style="color:#e03131">Log in</a>';
+          return;
+        }
+
         if (!res.ok) {
           statusEl.className = 'import-status error';
           statusEl.textContent = data.error || 'Something went wrong.';
@@ -804,6 +811,26 @@
       }
     });
   </script>
+  <script>
+    (async () => {
+      const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+      const btn = document.getElementById('authBtn');
+      if (me && me.userId) {
+        btn.textContent = me.username;
+        btn.style.color = '#f0f0f0';
+        btn.style.borderColor = '#444';
+        btn.onclick = () => window.location.href = '/profile.html';
+      } else {
+        btn.onclick = () => showAuthDialog(({ username }) => {
+          btn.textContent = username;
+          btn.style.color = '#f0f0f0';
+          btn.style.borderColor = '#444';
+          btn.onclick = () => window.location.href = '/profile.html';
+        });
+      }
+    })();
+  </script>
+  <script src="/auth-dialog.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {

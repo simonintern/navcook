@@ -1,5 +1,5 @@
 const CACHE = 'navcook-nf-__BUILD__';
-const SHELL = ['/', '/index.html', '/recipe.html'];
+const SHELL = ['/', '/index.html', '/recipe.html', '/create.html', '/login.html', '/profile.html', '/auth-dialog.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

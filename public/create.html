@@ -400,6 +400,12 @@
 
     // ── Load existing recipe for edit ─────────────────────────────────────────
     async function init() {
+      const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+      if (!me || !me.userId) {
+        showAuthDialog(() => init());
+        return;
+      }
+
       if (!editId) {
         buildIngredientPanel();
         buildStepsPanel();
@@ -411,6 +417,11 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const doc = await res.json();
         const recipe = doc.recipe;
+
+        if (doc.ownerId && doc.ownerId !== me.userId) {
+          document.body.innerHTML = '<p style="padding:2rem;color:#e03131">You do not have permission to edit this recipe.</p>';
+          return;
+        }
 
         titleEl.value = recipe.name || '';
         requestAnimationFrame(() => autoGrow(titleEl));
@@ -511,6 +522,7 @@
       el.className = 'save-status' + (isError ? ' error' : '');
     }
   </script>
+  <script src="/auth-dialog.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {

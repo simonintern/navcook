@@ -378,7 +378,7 @@
       </button>
     </div>
     <div class="header-top-row">
-      <h1 style="flex:1"><span id="recipeTitle"></span><a id="editBtn" href="#" title="Edit recipe" style="display:none;color:#555;font-size:0.75em;padding:0.1em 0.25em;margin-left:0.35em;text-decoration:none;transition:color 0.15s;vertical-align:middle" onmouseover="this.style.color='#e03131'" onmouseout="this.style.color='#555'"><i class="fa-solid fa-pen-to-square"></i></a></h1>
+      <h1 style="flex:1"><span id="recipeTitle"></span><a id="editBtn" href="#" title="Edit recipe" style="display:none;color:#555;font-size:0.75em;padding:0.1em 0.25em;margin-left:0.35em;text-decoration:none;transition:color 0.15s;vertical-align:middle" onmouseover="this.style.color='#e03131'" onmouseout="this.style.color='#555'"><i class="fa-solid fa-pen-to-square"></i></a><button id="deleteBtn" title="Delete recipe" style="display:none;background:none;border:none;color:#555;font-size:0.75em;padding:0.1em 0.25em;margin-left:0.15em;cursor:pointer;transition:color 0.15s;vertical-align:middle" onmouseover="this.style.color='#e03131'" onmouseout="this.style.color='#555'"><i class="fa-solid fa-trash"></i></button></h1>
       <div class="recipe-timer" id="recipeTimer">
         <i class="fa-regular fa-clock"></i>
         <span id="recipeTimerDisplay">0:00</span>
@@ -688,6 +688,7 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const doc = await res.json();
         recipe = doc.recipe;
+        window._recipeDoc = doc;
       } catch (err) {
         document.getElementById('loadingMsg').className = 'message error';
         document.getElementById('loadingMsg').textContent = `Failed to load recipe: ${err.message}`;
@@ -847,8 +848,20 @@
       });
 
       const editBtn = document.getElementById('editBtn');
+      const deleteBtn = document.getElementById('deleteBtn');
       editBtn.href = `/create.html?id=${encodeURIComponent(id)}`;
-      editBtn.style.display = '';
+
+      const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+      if (me && me.userId && me.userId === window._recipeDoc.ownerId) {
+        editBtn.style.display = '';
+        deleteBtn.style.display = '';
+        deleteBtn.addEventListener('click', async () => {
+          if (!confirm(`Delete "${window._recipeDoc.recipe?.name}"? This cannot be undone.`)) return;
+          const res = await fetch(`/api/recipe/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          if (res.ok) window.location.href = '/';
+          else alert('Failed to delete recipe.');
+        });
+      }
 
       document.getElementById('header').style.display = '';
       document.getElementById('rawLinkBar').style.display = '';
@@ -879,6 +892,7 @@
 
     loadRecipe();
   </script>
+  <script src="/auth-dialog.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {

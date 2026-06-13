@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sign in — NavCook</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#e03131">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.25rem;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 360px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #e03131;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .step { display: none; }
+    .step.active { display: block; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #aaa;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #f0f0f0;
+      font-size: 1rem;
+      outline: none;
+      margin-bottom: 1rem;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-color: #e03131; }
+    input.invalid { border-color: #e03131; }
+    input.valid { border-color: #3a3; }
+
+    button[type="submit"], .btn {
+      width: 100%;
+      padding: 0.8rem;
+      background: #e03131;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button[type="submit"]:hover, .btn:hover { background: #c82a2a; }
+    button[type="submit"]:disabled { background: #555; cursor: not-allowed; }
+
+    .error {
+      color: #e03131;
+      font-size: 0.85rem;
+      margin-top: 0.75rem;
+      min-height: 1.2em;
+    }
+
+    .hint {
+      color: #666;
+      font-size: 0.85rem;
+      margin-top: 0.75rem;
+    }
+
+    .hint a {
+      color: #e03131;
+      text-decoration: none;
+    }
+
+    .username-status {
+      font-size: 0.8rem;
+      margin-top: -0.75rem;
+      margin-bottom: 1rem;
+      min-height: 1.1em;
+    }
+
+    .username-status.ok { color: #3a3; }
+    .username-status.bad { color: #e03131; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>NavCook</h1>
+  <p class="subtitle" id="subtitle">Sign in or create an account</p>
+
+  <!-- Step 1: Email -->
+  <div class="step active" id="step1">
+    <form id="emailForm">
+      <label for="emailInput">Email address</label>
+      <input id="emailInput" type="email" autocomplete="email" placeholder="you@example.com" required>
+      <button type="submit" id="sendBtn">Send code</button>
+      <p class="error" id="emailError"></p>
+    </form>
+  </div>
+
+  <!-- Step 2: Code -->
+  <div class="step" id="step2">
+    <form id="codeForm">
+      <label for="codeInput">6-digit code</label>
+      <input id="codeInput" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+      <button type="submit" id="verifyBtn">Verify</button>
+      <p class="error" id="codeError"></p>
+      <p class="hint"><a href="#" id="resendLink">Resend code</a></p>
+    </form>
+  </div>
+
+  <!-- Step 3: Username (new users only) -->
+  <div class="step" id="step3">
+    <form id="usernameForm">
+      <label for="usernameInput">Choose a username</label>
+      <input id="usernameInput" type="text" autocomplete="username" placeholder="coolchef" maxlength="30">
+      <p class="username-status" id="usernameStatus"></p>
+      <button type="submit" id="createBtn" disabled>Create account</button>
+      <p class="error" id="usernameError"></p>
+    </form>
+  </div>
+</div>
+
+<script>
+  const next = new URLSearchParams(location.search).get('next') || '/';
+  let currentEmail = '';
+  let currentCode = '';
+  let usernameCheckTimer = null;
+
+  function showStep(n) {
+    document.querySelectorAll('.step').forEach((el, i) => el.classList.toggle('active', i + 1 === n));
+  }
+
+  // Step 1 — send code
+  document.getElementById('emailForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = document.getElementById('emailInput').value.trim();
+    const btn = document.getElementById('sendBtn');
+    const err = document.getElementById('emailError');
+    err.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      const res = await fetch('/api/auth/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) { err.textContent = data.error; return; }
+      currentEmail = email;
+      document.getElementById('subtitle').textContent = data.isNewUser
+        ? `We'll create an account for ${email}`
+        : `Check ${email} for your code`;
+      showStep(2);
+      document.getElementById('codeInput').focus();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send code';
+    }
+  });
+
+  // Resend link
+  document.getElementById('resendLink').addEventListener('click', async e => {
+    e.preventDefault();
+    const err = document.getElementById('codeError');
+    err.textContent = '';
+    try {
+      const res = await fetch('/api/auth/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentEmail }),
+      });
+      if (res.ok) err.style.color = '#3a3', err.textContent = 'New code sent!';
+      else err.style.color = '', err.textContent = (await res.json()).error;
+    } catch { err.textContent = 'Network error'; }
+  });
+
+  // Step 2 — verify code
+  document.getElementById('codeForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const code = document.getElementById('codeInput').value.trim();
+    const btn = document.getElementById('verifyBtn');
+    const err = document.getElementById('codeError');
+    err.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Verifying…';
+
+    try {
+      const res = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentEmail, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) { err.textContent = data.error; return; }
+      if (data.needsUsername) {
+        currentCode = code;
+        document.getElementById('subtitle').textContent = 'One last step';
+        showStep(3);
+        document.getElementById('usernameInput').focus();
+      } else {
+        window.location.href = next;
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Verify';
+    }
+  });
+
+  // Step 3 — username availability check
+  document.getElementById('usernameInput').addEventListener('input', e => {
+    const val = e.target.value.trim();
+    const status = document.getElementById('usernameStatus');
+    const btn = document.getElementById('createBtn');
+    clearTimeout(usernameCheckTimer);
+    btn.disabled = true;
+
+    if (!val) { status.textContent = ''; return; }
+
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(val)) {
+      status.className = 'username-status bad';
+      status.textContent = '3–30 characters: letters, numbers, underscores only';
+      return;
+    }
+
+    status.className = 'username-status';
+    status.textContent = 'Checking…';
+
+    usernameCheckTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        if (data.available) {
+          status.className = 'username-status ok';
+          status.textContent = `${val} is available`;
+          btn.disabled = false;
+        } else {
+          status.className = 'username-status bad';
+          status.textContent = `${val} is taken`;
+        }
+      } catch { status.textContent = ''; }
+    }, 350);
+  });
+
+  // Step 3 — create account
+  document.getElementById('usernameForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const username = document.getElementById('usernameInput').value.trim();
+    const btn = document.getElementById('createBtn');
+    const err = document.getElementById('usernameError');
+    err.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    try {
+      const res = await fetch('/api/auth/set-username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentEmail, code: currentCode, username }),
+      });
+      const data = await res.json();
+      if (!res.ok) { err.textContent = data.error; btn.disabled = false; btn.textContent = 'Create account'; return; }
+      window.location.href = next;
+    } catch { err.textContent = 'Network error'; btn.disabled = false; btn.textContent = 'Create account'; }
+  });
+</script>
+</body>
+</html>

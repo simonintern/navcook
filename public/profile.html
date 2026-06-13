@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Profile — NavCook</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#e03131">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 1.25rem 0;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: #f0f0f0;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0.4rem;
+      margin: -0.4rem;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #aaa;
+    }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid #333;
+      color: #aaa;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .logout-btn:hover { border-color: #e03131; color: #e03131; }
+
+    .profile-info {
+      padding: 1.5rem 1.25rem 0.5rem;
+    }
+
+    .username {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    .email {
+      color: #666;
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 1.5rem 1.25rem 0.75rem;
+    }
+
+    .recipe-list { padding: 0 1.25rem 3rem; }
+
+    .recipe-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid #1e1e1e;
+      text-decoration: none;
+      color: inherit;
+      gap: 1rem;
+    }
+
+    .recipe-item:last-child { border-bottom: none; }
+
+    .recipe-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      flex: 1;
+    }
+
+    .recipe-date {
+      font-size: 0.78rem;
+      color: #555;
+      white-space: nowrap;
+    }
+
+    .empty {
+      padding: 2rem 1.25rem;
+      color: #555;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="history.back()"><i class="fa-solid fa-arrow-left"></i></button>
+  <span class="header-title">Profile</span>
+  <button class="logout-btn" id="logoutBtn">Log out</button>
+</div>
+
+<div class="profile-info">
+  <div class="username" id="username"></div>
+</div>
+
+<div class="section-title">Your recipes</div>
+<div class="recipe-list" id="recipeList"></div>
+
+<script>
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  async function init() {
+    const me = await fetch('/api/auth/me').then(r => r.json());
+    if (!me.userId) {
+      window.location.href = '/login.html?next=' + encodeURIComponent(location.href);
+      return;
+    }
+
+    document.getElementById('username').textContent = me.username;
+
+    // Fetch full user info for email display
+    const recipes = await fetch('/api/profile').then(r => r.json());
+    const list = document.getElementById('recipeList');
+
+    if (!recipes.length) {
+      list.innerHTML = '<p class="empty">No recipes yet. Import or create one to get started.</p>';
+      return;
+    }
+
+    list.innerHTML = recipes.map(r => `
+      <a class="recipe-item" href="/recipe.html?id=${r.id}">
+        <span class="recipe-name">${r.name}</span>
+        <span class="recipe-date">${formatDate(r.dateAdded)}</span>
+      </a>
+    `).join('');
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/';
+  });
+
+  init();
+</script>
+</body>
+</html>
