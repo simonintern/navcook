@@ -377,7 +377,8 @@ app.get('/api/recipes', async (req, res) => {
 app.get('/api/recipe/:id', async (req, res) => {
   const doc = await db.findOneAsync({ _id: req.params.id });
   if (!doc) return res.status(404).json({ error: 'Recipe not found' });
-  res.json({ ...doc, ownerId: doc.ownerId || null });
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify({ ...doc, ownerId: doc.ownerId || null }, null, 2));
 });
 
 app.put('/api/recipe/:id', requireAuth, async (req, res) => {

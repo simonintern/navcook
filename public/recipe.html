@@ -88,6 +88,34 @@
       margin-top: 0.3rem;
     }
 
+    .imported-from {
+      display: none;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.55rem;
+      margin-bottom: 0.5rem;
+      padding: 0.3rem 0.65rem;
+      border: 1px solid #3b5bdb;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      color: #748ffc;
+      width: fit-content;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    .imported-from.visible { display: flex; }
+
+    .imported-from a {
+      color: inherit;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .imported-from a:hover { text-decoration: underline; }
+
     /* Recipe-level timer (top-right of header) */
     .recipe-timer {
       display: none;
@@ -289,21 +317,33 @@
       overflow-wrap: break-word;
     }
 
-    /* Raw link */
-    .raw-link-bar {
-      padding: 0.6rem 1.25rem;
-      background: #0f0f0f;
-      border-bottom: 1px solid #1e1e1e;
+    /* Raw JSON pill */
+    .raw-json-pill {
+      display: none;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.45rem;
+      padding: 0.3rem 0.65rem;
+      border: 1px solid #555;
+      border-radius: 20px;
       font-size: 0.75rem;
-      color: #666;
+      color: #888;
+      width: fit-content;
+      max-width: 100%;
+      overflow: hidden;
     }
 
-    .raw-link-bar a {
-      color: #e03131;
+    .raw-json-pill.visible { display: flex; }
+
+    .raw-json-pill a {
+      color: inherit;
       text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .raw-link-bar a:hover { text-decoration: underline; }
+    .raw-json-pill a:hover { text-decoration: underline; }
 
     /* Error / loading */
     .message {
@@ -385,10 +425,14 @@
       </div>
     </div>
     <p class="subtitle" id="recipeSubtitle"></p>
-  </div>
-
-  <div class="raw-link-bar" id="rawLinkBar" style="display:none">
-    Raw JSON: <a id="rawLink" href="#" target="_blank"></a>
+    <div class="imported-from" id="importedFrom">
+      <i class="fa-solid fa-link"></i>
+      <span>Imported from: </span><a id="importedFromLink" href="#" target="_blank" rel="noopener"></a>
+    </div>
+    <div class="raw-json-pill" id="rawLinkBar">
+      <i class="fa-solid fa-code"></i>
+      <span>Raw JSON: </span><a id="rawLink" href="#" target="_blank"></a>
+    </div>
   </div>
 
   <div class="content">
@@ -736,6 +780,18 @@
       const countPart = `${ingredients.length} ingredient${ingredients.length !== 1 ? 's' : ''} · ${steps.length} step${steps.length !== 1 ? 's' : ''}`;
       document.getElementById('recipeSubtitle').textContent = timePart ? `${timePart} · ${countPart}` : countPart;
 
+      if (recipe.sourceUrl) {
+        const link = document.getElementById('importedFromLink');
+        link.href = recipe.sourceUrl;
+        try {
+          link.textContent = new URL(recipe.sourceUrl).hostname.replace(/^www\./, '');
+        } catch {
+          link.textContent = recipe.sourceUrl;
+        }
+        link.title = recipe.sourceUrl;
+        document.getElementById('importedFrom').classList.add('visible');
+      }
+
       const apiUrl = `/api/recipe/${encodeURIComponent(id)}`;
       document.getElementById('rawLink').href = apiUrl;
       document.getElementById('rawLink').textContent = apiUrl;
@@ -870,7 +926,7 @@
       }
 
       document.getElementById('header').style.display = '';
-      document.getElementById('rawLinkBar').style.display = '';
+      document.getElementById('rawLinkBar').classList.add('visible');
       document.getElementById('tabBar').style.display = '';
       document.getElementById('fabGroup').style.display = 'flex';
 
