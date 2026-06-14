@@ -697,7 +697,7 @@
 
       document.getElementById('loadingMsg').style.display = 'none';
 
-      const title = recipe.name || 'Recipe';
+      const title = decodeHtml(recipe.name || 'Recipe');
       document.title = `${title} — NavCook`;
 
       const ingredients = recipe.recipeIngredient || [];
@@ -708,24 +708,30 @@
 
       document.getElementById('recipeTitle').textContent = title;  // targets the <span>
 
-      function parseDuration(iso) {
+      function parseDurationMins(iso) {
         if (!iso) return null;
         const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
         if (!m) return null;
-        const h = parseInt(m[1] || 0), min = parseInt(m[2] || 0);
-        if (!h && !min) return null;
-        return h ? `${h}h${min ? ` ${min}m` : ''}` : `${min}m`;
+        const mins = parseInt(m[1] || 0) * 60 + parseInt(m[2] || 0);
+        return mins > 0 ? mins : null;
       }
 
-      const prep = parseDuration(recipe.prepTime);
-      const cook = parseDuration(recipe.cookTime);
-      const total = parseDuration(recipe.totalTime);
+      function fmtDuration(mins) {
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        if (!h) return `${m}m`;
+        return `${h}:${String(m).padStart(2, '0')}`;
+      }
+
+      const prep = parseDurationMins(recipe.prepTime);
+      const cook = parseDurationMins(recipe.cookTime);
+      const total = parseDurationMins(recipe.totalTime);
 
       let timePart = '';
-      if (prep && cook) timePart = `${prep} prep · ${cook} cook`;
-      else if (total) timePart = total;
-      else if (prep) timePart = prep;
-      else if (cook) timePart = cook;
+      if (prep && cook) timePart = `${fmtDuration(prep)} prep · ${fmtDuration(cook)} cook${total ? ` · ${fmtDuration(total)} total` : ''}`;
+      else if (total) timePart = `${fmtDuration(total)} total`;
+      else if (prep) timePart = `${fmtDuration(prep)} prep`;
+      else if (cook) timePart = `${fmtDuration(cook)} cook`;
 
       const countPart = `${ingredients.length} ingredient${ingredients.length !== 1 ? 's' : ''} · ${steps.length} step${steps.length !== 1 ? 's' : ''}`;
       document.getElementById('recipeSubtitle').textContent = timePart ? `${timePart} · ${countPart}` : countPart;
