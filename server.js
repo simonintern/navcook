@@ -150,12 +150,18 @@ function extractRecipe(html, sourceUrl) {
   delete recipe.reviews;
 
   if (Array.isArray(recipe.recipeInstructions)) {
-    recipe.recipeInstructions = recipe.recipeInstructions.map(step => {
+    const dedupeStepName = step => {
       if (step && typeof step === 'object' && step.name && step.text && step.name === step.text) {
         const { name, ...rest } = step;
         return rest;
       }
       return step;
+    };
+    recipe.recipeInstructions = recipe.recipeInstructions.map(step => {
+      if (step && typeof step === 'object' && Array.isArray(step.itemListElement)) {
+        return { ...step, itemListElement: step.itemListElement.map(dedupeStepName) };
+      }
+      return dedupeStepName(step);
     });
   }
 
@@ -262,6 +268,45 @@ app.get('/api/auth/check-username', async (req, res) => {
 });
 
 // ── Recipe endpoints ──────────────────────────────────────────────────────────
+
+app.post('/api/import-json', requireAuth, async (req, res) => {
+  const { json } = req.body;
+  if (!json) return res.status(400).json({ error: 'json is required' });
+
+  let recipe;
+  try {
+    const parsed = typeof json === 'string' ? JSON.parse(json) : json;
+    const candidates = Array.isArray(parsed) ? parsed : [parsed['@graph'] ? parsed['@graph'] : parsed].flat();
+    for (const item of candidates.flat()) {
+      if (item?.['@type'] === 'Recipe' || (Array.isArray(item?.['@type']) && item['@type'].includes('Recipe'))) {
+        recipe = item;
+        break;
+      }
+    }
+    if (!recipe) {
+      // treat the whole object as a recipe if it has a name field
+      if (parsed.name) {
+        recipe = parsed;
+      } else {
+        return res.status(422).json({ error: 'No Recipe found in JSON. Make sure it has a name field or @type: Recipe.' });
+      }
+    }
+  } catch (err) {
+    return res.status(422).json({ error: `Invalid JSON: ${err.message}` });
+  }
+
+  delete recipe.aggregateRating;
+  delete recipe.review;
+  delete recipe.reviews;
+
+  const doc = await db.insertAsync({
+    recipe,
+    ownerId: req.session.userId,
+    metadata: { dateAdded: new Date().toISOString() },
+  });
+
+  res.json({ id: doc._id });
+});
 
 app.post('/api/import', requireAuth, async (req, res) => {
   const { url } = req.body;

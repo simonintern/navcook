@@ -95,7 +95,7 @@
       pointer-events: none;
     }
 
-    .import-row input[type="url"] {
+    .import-row input[type="text"] {
       width: 100%;
       padding: 0.6rem 1rem 0.6rem 2.4rem;
       background: #1a1a1a;
@@ -108,8 +108,8 @@
       box-sizing: border-box;
     }
 
-    .import-row input[type="url"]::placeholder { color: #555; }
-    .import-row input[type="url"]:focus { border-color: #e03131; }
+    .import-row input[type="text"]::placeholder { color: #555; }
+    .import-row input[type="text"]:focus { border-color: #e03131; }
 
     .import-row button {
       flex-shrink: 0;
@@ -469,9 +469,9 @@
       <div class="import-input-wrap">
         <i class="fa-solid fa-link import-link-icon"></i>
         <input
-          type="url"
+          type="text"
           id="urlInput"
-          placeholder="Paste a recipe URL…"
+          placeholder="Paste a recipe URL or JSON…"
           required
           autocomplete="off"
         >
@@ -771,19 +771,23 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const url = urlInput.value.trim();
-      if (!url) return;
+      const raw = urlInput.value.trim();
+      if (!raw) return;
 
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
       statusEl.className = 'import-status';
       statusEl.textContent = '';
 
+      const isJson = raw.startsWith('{') || raw.startsWith('[');
+      const endpoint = isJson ? '/api/import-json' : '/api/import';
+      const body = isJson ? { json: raw } : { url: raw };
+
       try {
-        const res = await fetch('/api/import', {
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url }),
+          body: JSON.stringify(body),
         });
 
         const data = await res.json();
