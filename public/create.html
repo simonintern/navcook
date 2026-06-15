@@ -281,12 +281,28 @@
   </nav>
 
   <script>
-    const editId = new URLSearchParams(location.search).get('id');
+    const params = new URLSearchParams(location.search);
+    const editId = params.get('id');
+    const forkId = params.get('fork');
+    let forkSourceName = null;
+
+    function decodeHtml(str) {
+      const txt = document.createElement('textarea');
+      txt.innerHTML = str;
+      return txt.value;
+    }
 
     // Set page title and back link depending on mode
     if (editId) {
       document.title = 'NavCook — Edit Recipe';
       document.querySelector('.header-back').href = `/recipe.html?id=${encodeURIComponent(editId)}`;
+    }
+    if (forkId) {
+      document.title = 'NavCook — Fork Recipe';
+      const backLink = document.querySelector('.header-back');
+      backLink.textContent = '';
+      backLink.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Cancel';
+      backLink.href = `/recipe.html?id=${encodeURIComponent(forkId)}`;
     }
 
     function switchTab(tab) {
@@ -406,27 +422,30 @@
         return;
       }
 
-      if (!editId) {
+      if (!editId && !forkId) {
         buildIngredientPanel();
         buildStepsPanel();
         return;
       }
 
+      const loadId = editId || forkId;
       try {
-        const res = await fetch(`/api/recipe/${encodeURIComponent(editId)}`);
+        const res = await fetch(`/api/recipe/${encodeURIComponent(loadId)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const doc = await res.json();
         const recipe = doc.recipe;
 
-        if (doc.ownerId && doc.ownerId !== me.userId) {
+        if (editId && doc.ownerId && doc.ownerId !== me.userId) {
           document.body.innerHTML = '<p style="padding:2rem;color:#e03131">You do not have permission to edit this recipe.</p>';
           return;
         }
 
-        titleEl.value = recipe.name || '';
+        const sourceName = decodeHtml(recipe.name || '');
+        if (forkId) forkSourceName = sourceName;
+        titleEl.value = forkId ? `Copy of ${sourceName}` : sourceName;
         requestAnimationFrame(() => autoGrow(titleEl));
 
-        const ingredients = recipe.recipeIngredient || [];
+        const ingredients = (recipe.recipeIngredient || []).map(decodeHtml);
         buildIngredientPanel(ingredients.length ? ingredients : ['']);
 
         const rawSteps = Array.isArray(recipe.recipeInstructions) ? recipe.recipeInstructions : [];
@@ -455,8 +474,8 @@
     }
 
     function toStepObj(step) {
-      const text = getStepText(step);
-      const name = typeof step === 'object' ? (step.name || '') : '';
+      const text = decodeHtml(getStepText(step));
+      const name = decodeHtml(typeof step === 'object' ? (step.name || '') : '');
       return { name, text };
     }
 
@@ -496,10 +515,14 @@
       try {
         const url = editId ? `/api/recipe/${encodeURIComponent(editId)}` : '/api/recipes';
         const method = editId ? 'PUT' : 'POST';
+        const body = { name, recipeIngredient: ingredients, recipeInstructions: steps };
+        if (forkId) {
+          body.forkedFrom = { id: forkId, name: forkSourceName || name };
+        }
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, recipeIngredient: ingredients, recipeInstructions: steps }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         if (!res.ok) {

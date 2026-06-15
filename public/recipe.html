@@ -106,6 +106,44 @@
 
     .imported-from.visible { display: flex; }
 
+    .imported-from.forked {
+      border-color: #c2410c;
+      color: #fb923c;
+    }
+
+    /* Recipe action buttons (edit / delete / fork) */
+    .recipe-actions {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .recipe-actions.visible { display: flex; }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.8rem;
+      border-radius: 20px;
+      border: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #e8e8e8;
+      cursor: pointer;
+      text-decoration: none;
+      transition: filter 0.15s, transform 0.1s;
+    }
+
+    .action-btn:active { transform: scale(0.95); }
+    .action-btn:hover { filter: brightness(1.15); }
+
+    .action-btn-edit  { background: #1a2d4a; }
+    .action-btn-delete { background: #3b1111; }
+    .action-btn-fork  { background: #3b1e08; }
+
     .imported-from a {
       color: inherit;
       text-decoration: none;
@@ -418,16 +456,21 @@
       </button>
     </div>
     <div class="header-top-row">
-      <h1 style="flex:1"><span id="recipeTitle"></span><a id="editBtn" href="#" title="Edit recipe" style="display:none;color:#555;font-size:0.75em;padding:0.1em 0.25em;margin-left:0.35em;text-decoration:none;transition:color 0.15s;vertical-align:middle" onmouseover="this.style.color='#e03131'" onmouseout="this.style.color='#555'"><i class="fa-solid fa-pen-to-square"></i></a><button id="deleteBtn" title="Delete recipe" style="display:none;background:none;border:none;color:#555;font-size:0.75em;padding:0.1em 0.25em;margin-left:0.15em;cursor:pointer;transition:color 0.15s;vertical-align:middle" onmouseover="this.style.color='#e03131'" onmouseout="this.style.color='#555'"><i class="fa-solid fa-trash"></i></button></h1>
+      <h1 style="flex:1"><span id="recipeTitle"></span></h1>
       <div class="recipe-timer" id="recipeTimer">
         <i class="fa-regular fa-clock"></i>
         <span id="recipeTimerDisplay">0:00</span>
       </div>
     </div>
     <p class="subtitle" id="recipeSubtitle"></p>
+    <div class="recipe-actions" id="recipeActions">
+      <a id="editBtn" href="#" class="action-btn action-btn-edit"><i class="fa-solid fa-pen-to-square"></i> Edit</a>
+      <button id="forkBtn" class="action-btn action-btn-fork"><i class="fa-solid fa-code-fork"></i> Fork</button>
+      <button id="deleteBtn" class="action-btn action-btn-delete"><i class="fa-solid fa-trash"></i> Delete</button>
+    </div>
     <div class="imported-from" id="importedFrom">
-      <i class="fa-solid fa-link"></i>
-      <span>Imported from: </span><a id="importedFromLink" href="#" target="_blank" rel="noopener"></a>
+      <i id="importedFromIcon" class="fa-solid fa-link"></i>
+      <span id="importedFromLabel">Imported from: </span><a id="importedFromLink" href="#" target="_blank" rel="noopener"></a>
     </div>
     <div class="raw-json-pill" id="rawLinkBar">
       <i class="fa-solid fa-code"></i>
@@ -780,7 +823,21 @@
       const countPart = `${ingredients.length} ingredient${ingredients.length !== 1 ? 's' : ''} · ${steps.length} step${steps.length !== 1 ? 's' : ''}`;
       document.getElementById('recipeSubtitle').textContent = timePart ? `${timePart} · ${countPart}` : countPart;
 
-      if (recipe.sourceUrl) {
+      const forkedFrom = window._recipeDoc.metadata?.forkedFrom;
+      if (forkedFrom) {
+        const pill = document.getElementById('importedFrom');
+        const link = document.getElementById('importedFromLink');
+        const maxLen = 30;
+        const shortName = forkedFrom.name.length > maxLen
+          ? forkedFrom.name.slice(0, maxLen) + '…'
+          : forkedFrom.name;
+        link.href = `/recipe.html?id=${encodeURIComponent(forkedFrom.id)}`;
+        link.textContent = shortName;
+        link.title = forkedFrom.name;
+        document.getElementById('importedFromLabel').textContent = 'Forked from: ';
+        document.getElementById('importedFromIcon').className = 'fa-solid fa-code-fork';
+        pill.classList.add('visible', 'forked');
+      } else if (recipe.sourceUrl) {
         const link = document.getElementById('importedFromLink');
         link.href = recipe.sourceUrl;
         try {
@@ -913,16 +970,26 @@
       const deleteBtn = document.getElementById('deleteBtn');
       editBtn.href = `/create.html?id=${encodeURIComponent(id)}`;
 
+      const forkBtn = document.getElementById('forkBtn');
       const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
-      if (me && me.userId && me.userId === window._recipeDoc.ownerId) {
-        editBtn.style.display = '';
-        deleteBtn.style.display = '';
-        deleteBtn.addEventListener('click', async () => {
-          if (!confirm(`Delete "${window._recipeDoc.recipe?.name}"? This cannot be undone.`)) return;
-          const res = await fetch(`/api/recipe/${encodeURIComponent(id)}`, { method: 'DELETE' });
-          if (res.ok) window.location.href = '/';
-          else alert('Failed to delete recipe.');
+      if (me && me.userId) {
+        const isOwner = me.userId === window._recipeDoc.ownerId;
+        editBtn.style.display = isOwner ? '' : 'none';
+        deleteBtn.style.display = isOwner ? '' : 'none';
+        document.getElementById('recipeActions').classList.add('visible');
+
+        forkBtn.addEventListener('click', () => {
+          window.location.href = `/create.html?fork=${encodeURIComponent(id)}`;
         });
+
+        if (isOwner) {
+          deleteBtn.addEventListener('click', async () => {
+            if (!confirm(`Delete "${window._recipeDoc.recipe?.name}"? This cannot be undone.`)) return;
+            const res = await fetch(`/api/recipe/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            if (res.ok) window.location.href = '/';
+            else alert('Failed to delete recipe.');
+          });
+        }
       }
 
       document.getElementById('header').style.display = '';

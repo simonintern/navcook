@@ -346,7 +346,7 @@ app.post('/api/import', requireAuth, async (req, res) => {
 });
 
 app.post('/api/recipes', requireAuth, async (req, res) => {
-  const { name, recipeIngredient, recipeInstructions } = req.body;
+  const { name, recipeIngredient, recipeInstructions, forkedFrom } = req.body;
   if (!name) return res.status(400).json({ error: 'name is required' });
 
   const recipe = {
@@ -356,10 +356,13 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
     recipeInstructions: Array.isArray(recipeInstructions) ? recipeInstructions : [],
   };
 
+  const metadata = { dateAdded: new Date().toISOString(), sourceUrl: null };
+  if (forkedFrom && forkedFrom.id && forkedFrom.name) metadata.forkedFrom = forkedFrom;
+
   const doc = await db.insertAsync({
     recipe,
     ownerId: req.session.userId,
-    metadata: { dateAdded: new Date().toISOString(), sourceUrl: null },
+    metadata,
   });
 
   res.json({ id: doc._id });
@@ -399,6 +402,7 @@ app.put('/api/recipe/:id', requireAuth, async (req, res) => {
   await db.updateAsync({ _id: req.params.id }, { $set: { recipe: updatedRecipe } });
   res.json({ id: req.params.id });
 });
+
 
 app.delete('/api/recipe/:id', requireAuth, async (req, res) => {
   const doc = await db.findOneAsync({ _id: req.params.id });
