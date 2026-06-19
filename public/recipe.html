@@ -868,6 +868,8 @@
         const unchecked = cards.filter(c => !c.classList.contains('checked'));
         const checkedCards = cards.filter(c => c.classList.contains('checked'));
         [...unchecked, ...checkedCards].forEach(c => piPanel.appendChild(c));
+        const spacer = piPanel.querySelector('.ingredient-spacer');
+        if (spacer) piPanel.appendChild(spacer);
       }
 
       ingredients.forEach((ing, i) => {
@@ -909,6 +911,11 @@
         card.appendChild(cartBtn);
         piPanel.appendChild(card);
       });
+
+      const ingredientSpacer = document.createElement('div');
+      ingredientSpacer.className = 'ingredient-spacer';
+      ingredientSpacer.style.minHeight = '4rem';
+      piPanel.appendChild(ingredientSpacer);
 
       reorderIngredients();
 
